@@ -1,0 +1,75 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id               String         @id @default(uuid())
+  email            String         @unique
+  passwordHash     String
+  name             String
+  role             String         // "ADMIN" | "AGENT"
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  notes            Note[]
+  events           RequestEvent[]
+  assignedRequests Request[]      @relation("RequestAssignee")
+}
+
+model Request {
+  id             String         @id @default(uuid())
+  customerName   String
+  email          String
+  channel        String         // "email" | "whatsapp" | "webform" | "chat"
+  message        String
+  status         String         @default("NEW") // "NEW" | "QUEUED" | "IN_PROGRESS" | "RESOLVED" | "CLOSED"
+  assignedToId   String?
+  assignedTo     User?          @relation("RequestAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  classification Classification?
+  notes          Note[]
+  events         RequestEvent[]
+}
+
+model Classification {
+  id          String   @id @default(uuid())
+  requestId   String   @unique
+  request     Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  provider    String   @default("mock")
+  category    String   // "Billing" | "Technical Support" | "Sales" | "General Inquiry"
+  priority    String   // "HIGH" | "MEDIUM" | "LOW"
+  summary     String
+  confidence  Float
+  reason      String
+  rawOutput   String?  // JSON string of raw AI output
+  errorState  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  requestId String
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  note      String
+  createdAt DateTime @default(now())
+}
+
+model RequestEvent {
+  id        String   @id @default(uuid())
+  requestId String
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  eventType String   // "CREATED" | "QUEUED" | "CLASSIFIED" | "STATUS_CHANGE" | "NOTE_ADDED" | "ERROR"
+  oldStatus String?
+  newStatus String?
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id])
+  metadata  String?  // JSON string for additional context
+  createdAt DateTime @default(now())
+}
