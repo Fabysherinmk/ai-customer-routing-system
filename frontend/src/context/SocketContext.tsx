@@ -19,7 +19,14 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     // Connect to backend server URL
-    const backendUrl = import.meta.env.VITE_WS_URL || 'http://localhost:5000';
+    let backendUrl = import.meta.env.VITE_WS_URL;
+    if (!backendUrl && import.meta.env.VITE_API_URL) {
+      backendUrl = import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '');
+    }
+    if (!backendUrl) {
+      backendUrl = 'http://localhost:5000';
+    }
+
     const socketInstance = io(backendUrl, {
       transports: ['websocket'],
       withCredentials: true,

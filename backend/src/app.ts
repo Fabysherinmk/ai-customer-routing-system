@@ -14,13 +14,27 @@ const app = express();
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 5000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const cleanFrontendUrl = FRONTEND_URL.replace(/\/$/, '');
 
 // 1. Initialize Realtime Sockets
-initSocket(httpServer, FRONTEND_URL);
+initSocket(httpServer, cleanFrontendUrl);
 
 // 2. Middlewares
 app.use(cors({
-  origin: [FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000'],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const cleanOrigin = origin.replace(/\/$/, '');
+    if (
+      cleanOrigin === cleanFrontendUrl ||
+      cleanOrigin === 'http://localhost:5173' ||
+      cleanOrigin === 'http://localhost:3000' ||
+      cleanOrigin.endsWith('.vercel.app')
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true
 }));
